@@ -25,6 +25,12 @@ NIFTY50_SAMPLE = [
     # NSE tickers need '.NS' suffix for yfinance
     # BSE would use '.BO' instead
 
+TICKERS     = [
+    "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK",
+    "HINDUNILVR", "ITC", "SBIN", "BHARTIARTL", "KOTAKBANK",
+    "LT", "AXISBANK", "ASIANPAINT", "MARUTI", "TITAN",
+]
+
 NIFTY50_INDEX = "^NSEI"     # used as a market-wide feature
 
 START_DATE = "2020-01-01"
