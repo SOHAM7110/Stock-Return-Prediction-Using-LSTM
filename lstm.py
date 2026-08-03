@@ -1,4 +1,3 @@
-
 import numpy as np 
 import pandas as pd
 import os
@@ -16,7 +15,7 @@ from tensorflow.keras.callbacks import(
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.regularizers import l2
 
-from fetch_data import load_sequences
+from sliding_window_sequence import load_sequences
 import sys
 # sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -92,7 +91,7 @@ def build_regression_model(timesteps : int, n_features : int) -> Model:
     outputs = Dense(1, activation = 'linear', name = 'return_output')(x)
 
     model = Model(inputs, outputs, name = 'LSTM_Regression')
-    model.complie(
+    model.compile(
         optimizer = Adam(learning_rate = LR, clipnorm = 1.0),
         loss = 'huber',
         metrics = ["mae"]
@@ -138,7 +137,7 @@ def build_classifier_model(timesteps : int, n_features : int) -> Model:
 
     model = Model(input, output, name = 'lstm_classifier')
     model.compile(
-        optimizer = Adam(leraning_rate = LR, clipnorm = 1.0),
+        optimizer = Adam(learning_rate = LR, clipnorm = 1.0),
         loss = 'binary_crossentropy',
         metrics = ['accuracy']
     )
@@ -243,7 +242,7 @@ def train_regression(X_train, y_train, X_test, y_test, ticker) -> dict:
 
 def train_classifier(X_train, y_train_dir, X_test, y_test_dir, ticker) -> dict:
     timesteps, n_features = X_train.shape[1], X_train.shape[2]
-    model = build_classifier_model(y_train_dir)
+    model = build_classifier_model(timesteps, n_features)
 
     model_path = os.path.join(MODEL_DIR, f"{ticker}_classifer.keras")
     class_weight = compute_class_weights(y_train_dir)
@@ -272,14 +271,14 @@ def save_history(reg_hist: dict, clf_hist: dict, ticker: str):
     
     df = pd.DataFrame({
         "reg_loss" : pad(reg_hist["loss"]),
-        "reg_val_loss" : pad(reg_hist["cal_loss"]),
+        "reg_val_loss" : pad(reg_hist["val_loss"]),
         "reg_mae" : pad(reg_hist["mae"]),
         "clf_loss" : pad(clf_hist["loss"]),
         "clf_val_loss" : pad(clf_hist["val_loss"]),
         "clf_accuracy" : pad(clf_hist["accuracy"]),
         "clf_val_accuracy" : pad(clf_hist["val_accuracy"])
     })
-    path = os.path.join(MODEL_DIR, f"{ticker}_history,csv")
+    path = os.path.join(MODEL_DIR, f"{ticker}_history.csv")
     df.to_csv(path, index_label = "epoch")
     print(f"    History saved -> {path}")
 
@@ -315,7 +314,7 @@ def main():
     os.makedirs(MODEL_DIR, exist_ok = True)
 
     for ticker in TICKERS:
-        seq_path = os.join(SEQ_DIR, f"{ticker}_X_train.npy")
+        seq_path = os.path.join(SEQ_DIR, f"{ticker}_X_train.npy")
         if not os.path.exists(seq_path):
             print(f"\n SKIP {ticker} — sequences not found")
             continue
@@ -337,5 +336,3 @@ def main():
         save_history(reg_hist, clf_hist, ticker)
 
         print("Stage 4 complete.")
-
-

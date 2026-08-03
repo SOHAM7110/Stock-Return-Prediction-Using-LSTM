@@ -44,7 +44,7 @@ def ml_metrics(y_true : np.ndarray, y_pred : np.ndarray) -> dict:
     ss_tot = ((y_true - y_true.mean()) ** 2).sum()
 
     return {
-        "rsme" : float(np.sqrt(np.mean(residuals ** 2))),
+        "rmse" : float(np.sqrt(np.mean(residuals ** 2))),
         "mae"  : float(np.mean(np.abs(residuals))),
         "r2"   : float(1 - ss_res / ss_tot) if ss_tot > 0 else np.nan,
     }
@@ -221,7 +221,7 @@ def information_coefficient(y_true : np.ndarray, y_pred : np.ndarray) -> dict:
     rolling_ic = []
 
     for i in range(21, n):
-        window_ic = stats.spearman(y_pred[i-21 : i], y_true[i-21 : i])
+        window_ic = stats.spearmanr(y_pred[i-21 : i], y_true[i-21 : i])
         rolling_ic.append(window_ic)
 
     rolling_ic = np.array(rolling_ic)
@@ -267,7 +267,7 @@ def quintile_analysis(y_true : np.ndarray, y_pred : np.ndarray) -> dict:
 
     qmeans = df.groupby("quintile", observed = True)["actual"].mean()
 
-    result = {f"quintile_{q}_mean_ret" : float(qmeans.get(q, np.nan))}
+    result = {f"quintile_{q}_mean_ret" : float(qmeans.get(q, np.nan)) for q in ["Q1", "Q2", "Q3", "Q4", "Q5"]}
 
     q1 = qmeans.get("Q1", np.nan)
     q5 = qmeans.get("Q5", np.nan)
@@ -412,6 +412,7 @@ def main():
         model_path = os.path.join(MODEL_DIR, f"{ticker}_regression.keras")
         if not os.path.exists(model_path):
             print("Model not found Run stage 4")
+            continue
         try:
             metrics = evaluate_ticker(ticker)
             all_results.append(metrics)

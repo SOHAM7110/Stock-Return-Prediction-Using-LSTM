@@ -95,7 +95,7 @@ def naive_backtest(y_true : np.ndarray,
     }, index = dates)
 
     df["strategy_equity"] = (1 + df["strategy_ret"]).cumprod()
-    df["buyhold_equity"] = (1 + df["buyhold_ret"].cumprod)
+    df["buyhold_equity"] = (1 + df["buyhold_ret"].cumprod())
     return df
 
 # LAYER 2 : Realistic Backtest 
@@ -168,7 +168,8 @@ def realistic_backtest(y_true : np.ndarray, y_pred : np.ndarray,
         df["buyhold_equity"]  = (1 + y_true).cumprod()
         df["buyhold_ret"]     = y_true
         df["n_trades"]        = (df["delta"].abs() > 0.01).cumsum()
-        return df
+
+    return df
 
 
 
@@ -335,7 +336,7 @@ def walk_forward_backtest(y_true : np.ndarray,
                 start += step
                 
                 summary = pd.DataFrame(results)
-                return summary
+        return summary
 
 
 
@@ -490,68 +491,67 @@ def main():
         model_path = os.path.join(MODEL_DIR, f"{ticker}_regression.keras")
         seq_path = os.path.join(SEQ_DIR, f"{ticker}_X_test.npy")
 
-        if not os.path.exists(model_path) or not os.path.exista(seq_path):
+        if not os.path.exists(model_path) or not os.path.exists(seq_path):
             print(f"\n SKIP {ticker}, model or sequence not found")
             continue
+        print(f"\n{'-'*25}")
+        print(f"  {ticker}")
+        print(f"{'-'*25}")
 
-    print(f"\n{'-'*25}")
-    print(f"  {ticker}")
-    print(f"{'-'*25}")
+        # Load Sequences
+        X_train, y_train, X_test, y_test, train_dates, test_dates = load_sequences(ticker)
 
-    # Load Sequences
-    X_train, y_train, X_test, y_test, train_dates, test_dates = load_sequences(ticker)
+        # Load model and predict
+        model = tf.keras.models.load_model(model_path)
+        y_pred = model.predict(X_test, verbose = 0).flatten()
+        y_true = y_test.flatten()
+        dates = pd.DatetimeIndex(test_dates)
 
-    # Load model and predict
-    model = tf.keras.models.load_model(model_path)
-    y_pred = model.predict(X_test, verbose = 0).flatten()
-    y_true = y_test.flatten()
-    dates = pd.DatetimeIndex(test_dates)
+        print(f"  Test period : {dates[0].date()} → {dates[-1].date()}")
+        print(f"  Samples     : {len(y_true)}")
 
-    print(f"  Test period : {dates[0].date()} → {dates[-1].date()}")
-    print(f"  Samples     : {len(y_true)}")
+        # Naive backtest
+        naive_df = naive_backtest(y_true, y_pred, dates)
+        naive_df.to_csv(os.path.join(BACKTEST_DIR, f"{ticker}_naive.csv"))
+        naive_m = compute_metrics(
+            naive_df.assign(delta = 0, cost = 0, buyhold_ret = y_true),
+            ret_col = "strategy_ret", equity_col = "strategy_equity"
+        )
 
-    # Naive backtest
-    naive_df = naive_backtest(y_true, y_pred, dates)
-    naive_df.to_csv(os.path.join(BACKTEST_DIR, f"{ticker}_naive.csv"))
-    naive_m = compute_metrics(
-        naive_df.assign(delta = 0, cost = 0, buyhold_ret = y_true),
-        ret_col = "strategy_ret", equity_col = "strategy_equity"
-    )
+        # Realistic
+        real_df = realistic_backtest(y_true, y_pred, dates)
+        real_df.to_csv(os.path.join(BACKTEST_DIR, f"{ticker}_realistic.csv"))
+        real_m = compute_metrics(real_df)
 
-    # Realistic
-    real_df = realistic_backtest(y_true, y_pred, dates)
-    real_df.to_csv(os.path.join(BACKTEST_DIR, f"{ticker}_realistic.csv"))
-    real_m = compute_metrics(real_df)
+        # Kelly
+        kelly_df = kelly_backtest(y_true, y_pred, dates)
+        kelly_df.to_csv(os.path.join(BACKTEST_DIR, f"{ticker}_kelly.csv"))
+        kelly_m = compute_metrics(kelly_df)
 
-    # Kelly
-    kelly_df = kelly_backtest(y_true, y_pred, dates)
-    kelly_df.tocsv(os.path.join(BACKTEST_DIR, f"{ticker}_kelly.csv"))
-    kelly_m = compute_metrics(kelly_df)
+        # Comparison
+        print_layer_comparison(ticker, naive_m, real_m, kelly_m)
 
-    # Comparison
-    print_layer_comparison(ticker, naive_m, real_m, kelly_m)
+        # Walk forward
+        wf_df = walk_forward_backtest(y_true, y_pred, dates)
+        wf_df.to_csv(
+            os.path.join(BACKTEST_DIR, f"{ticker}_walkforward.csv")
+        )
+        print_walkforward(wf_df, ticker)
 
-    # Walk forward
-    wf_df = walk_forward_backtest(y_true, y_pred, dates)
-    wf_df.to_csv(
-        os.path.join(BACKTEST_DIR, f"{ticker}_walkforward.csv")
-    )
-    print_walkforward(wf_df, ticker)
-
-    all_summary.append({
-        "ticker"             : ticker,
-        "naive_sharpe"       : naive_m["sharpe"],
-        "realistic_sharpe"   : real_m["sharpe"],
-        "kelly_sharpe"       : kelly_m["sharpe"],
-        "realistic_mdd"      : real_m["max_drawdown"],
-        "kelly_mdd"          : kelly_m["max_drawdown"],
-        "cost_drag"          : real_m["ann_return"] - naive_m["ann_return"],
-        "n_trades"           : real_m["n_trades"],
-        "total_cost"         : real_m["total_cost_paid"],
-        "wf_avg_sharpe"      : wf_df["sharpe"].mean(),
-        "wf_consistency"     : float((wf_df["sharpe"] > 0).mean()),
-        "beats_bh"           : real_m["beats_bh"],
-    })
+        all_summary.append({
+            "ticker"             : ticker,
+            "naive_sharpe"       : naive_m["sharpe"],
+            "realistic_sharpe"   : real_m["sharpe"],
+            "kelly_sharpe"       : kelly_m["sharpe"],
+            "realistic_mdd"      : real_m["max_drawdown"],
+            "kelly_mdd"          : kelly_m["max_drawdown"],
+            "cost_drag"          : real_m["ann_return"] - naive_m["ann_return"],
+            "n_trades"           : real_m["n_trades"],
+            "total_cost"         : real_m["total_cost_paid"],
+            "wf_avg_sharpe"      : wf_df["sharpe"].mean(),
+            "wf_consistency"     : float((wf_df["sharpe"] > 0).mean()),
+            "beats_bh"           : real_m["beats_bh"],
+        })
 
     # Cross-Ticker Summary
     if all_summary:

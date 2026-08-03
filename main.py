@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import time
 from datetime import date
-import os
+
 from scipy import stats
 import warnings
 warnings.filterwarnings("ignore")
@@ -15,75 +15,82 @@ import lstm
 import evaluation
 import backtest
 
+import os
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
-NIFTY50_SAMPLE = [                                                      
-    "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS",
-    "HINDUNILVR.NS", "ITC.NS", "SBIN.NS", "BHARTIARTL.NS", "KOTAKBANK.NS",
-    "LT.NS", "AXISBANK.NS", "ASIANPAINT.NS", "MARUTI.NS", "TITAN.NS",
-]   
-    # Each item is a ticker Symbol
-    # NSE tickers need '.NS' suffix for yfinance
-    # BSE would use '.BO' instead
+import tensorflow as tf
+tf.get_logger().setLevel("ERROR")
 
-TICKERS     = [
-    "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK",
-    "HINDUNILVR", "ITC", "SBIN", "BHARTIARTL", "KOTAKBANK",
-    "LT", "AXISBANK", "ASIANPAINT", "MARUTI", "TITAN",
-]
 
-NIFTY50_INDEX = "^NSEI"     # used as a market-wide feature
+# NIFTY50_SAMPLE = [                                                      
+#     "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS",
+#     "HINDUNILVR.NS", "ITC.NS", "SBIN.NS", "BHARTIARTL.NS", "KOTAKBANK.NS",
+#     "LT.NS", "AXISBANK.NS", "ASIANPAINT.NS", "MARUTI.NS", "TITAN.NS",
+# ]   
+#     # Each item is a ticker Symbol
+#     # NSE tickers need '.NS' suffix for yfinance
+#     # BSE would use '.BO' instead
 
-START_DATE = "2020-01-01"
-END_DATE = date.today()
-TEST_CUTOFF    = "2024-01-01"    # train = before, test = on/after
+# TICKERS     = [
+#     "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK",
+#     "HINDUNILVR", "ITC", "SBIN", "BHARTIARTL", "KOTAKBANK",
+#     "LT", "AXISBANK", "ASIANPAINT", "MARUTI", "TITAN",
+# ]
 
-OUTPUT_DIR = "data/raw"     # folder where csv files will be saved
+# NIFTY50_INDEX = "^NSEI"     # used as a market-wide feature
 
-WINDOW = 60
-HORIZON = 1
-FETCH_PAUSE = 1.0
+# START_DATE = "2020-01-01"
+# END_DATE = date.today()
+# TEST_CUTOFF    = "2024-01-01"    # train = before, test = on/after
 
-RAW_DIR        = "data/raw"
-FEATURE_DIR    = "data/features"
-SEQ_DIR        = "data/sequences"
-INDEX_FILE     = os.path.join(RAW_DIR, "NSEI.csv")
+# OUTPUT_DIR = "data/raw"     # folder where csv files will be saved
 
-FEATURE_COLS = [
-    'log_return_1d', 'log_return_5d', 'log_return_10d', 'log_return_21d',
-    'rsi_14', 
-    'macd_line', 'macd_signal', 'macd_histogram',
-    'close_to_sma20', 'close_to_sma50',
-    'roc_5', 'roc_21',
-    'bb_width', 'bb_position',
-    'atr_14_norm', 'realised_vol_21',
-    'volume_zscore', 'volume_ratio_5d', 'obv_zscore',
-    'rolling_beta', 'index_ret', 'relative_return'
-]
-NORM_COLS      = [f"{c}_norm" for c in FEATURE_COLS]
-TARGET_COL     = f"target_return_{HORIZON}d"
+# WINDOW = 60
+# HORIZON = 1
+# FETCH_PAUSE = 1.0
 
-TRADING_DAYS  = 252
-TX_COST       = 0.001        # 0.1% per trade (realistic NSE estimate)
-RISK_FREE     = 0.065        # 6.5% annual (approx Indian 10-yr G-Sec yield)
-RF_DAILY      = RISK_FREE / TRADING_DAYS
+# RAW_DIR        = "data/raw"
+# FEATURE_DIR    = "data/features"
+# SEQ_DIR        = "data/sequences"
+# INDEX_FILE     = os.path.join(RAW_DIR, "NSEI.csv")
 
-BACKTEST_DIR = "backtest"
-MODEL_DIR = "models"
-RESULTS_DIR = "results"
+# FEATURE_COLS = [
+#     'log_return_1d', 'log_return_5d', 'log_return_10d', 'log_return_21d',
+#     'rsi_14', 
+#     'macd_line', 'macd_signal', 'macd_histogram',
+#     'close_to_sma20', 'close_to_sma50',
+#     'roc_5', 'roc_21',
+#     'bb_width', 'bb_position',
+#     'atr_14_norm', 'realised_vol_21',
+#     'volume_zscore', 'volume_ratio_5d', 'obv_zscore',
+#     'rolling_beta', 'index_ret', 'relative_return'
+# ]
+# NORM_COLS      = [f"{c}_norm" for c in FEATURE_COLS]
+# TARGET_COL     = f"target_return_{HORIZON}d"
 
-BID_ASK_SPREAD = 0.0005     # 0.05% - large cap NSE stocks
-BROKERAGE = 0.0003          # 0.03% - discount broker 
-STT_SELL = 0.00025          # 0.025% - securities transaction tax (SELL ONLY)
-SEBI_CHARGE = 0.000001      # 0.0001%
-SLIPPAGE = 0.0002            # 0.02% execution slippage estimate
-MARKET_IMPACT_K = 0.0003    # scales with sqrt(order/avg_volume)
+# TRADING_DAYS  = 252
+# TX_COST       = 0.001        # 0.1% per trade (realistic NSE estimate)
+# RISK_FREE     = 0.065        # 6.5% annual (approx Indian 10-yr G-Sec yield)
+# RF_DAILY      = RISK_FREE / TRADING_DAYS
 
-BASE_ONE_WAY_COST = BID_ASK_SPREAD / 2 + BROKERAGE + SEBI_CHARGE + SLIPPAGE
+# BACKTEST_DIR = "backtest"
+# MODEL_DIR = "models"
+# RESULTS_DIR = "results"
 
-HALF_KELLY = 0.5            # fractional Kelly — conservative
-MAX_POSITION = 1.0          # cap at 100% of capital (no leverage)
-MIN_POSITION = 0.05         # ignore Kelly sizes below 5% (noise)
-SIGNAL_THRESHOLD  = 0.0     # minimum |predicted return| to trade
+# BID_ASK_SPREAD = 0.0005     # 0.05% - large cap NSE stocks
+# BROKERAGE = 0.0003          # 0.03% - discount broker 
+# STT_SELL = 0.00025          # 0.025% - securities transaction tax (SELL ONLY)
+# SEBI_CHARGE = 0.000001      # 0.0001%
+# SLIPPAGE = 0.0002            # 0.02% execution slippage estimate
+# MARKET_IMPACT_K = 0.0003    # scales with sqrt(order/avg_volume)
+
+# BASE_ONE_WAY_COST = BID_ASK_SPREAD / 2 + BROKERAGE + SEBI_CHARGE + SLIPPAGE
+
+# HALF_KELLY = 0.5            # fractional Kelly — conservative
+# MAX_POSITION = 1.0          # cap at 100% of capital (no leverage)
+# MIN_POSITION = 0.05         # ignore Kelly sizes below 5% (noise)
+# SIGNAL_THRESHOLD  = 0.0     # minimum |predicted return| to trade
 
 
 
@@ -112,4 +119,5 @@ def main():
         run_stage(stage_name, stage_function)
 
 
-
+if __name__ == "__main__":
+    main()

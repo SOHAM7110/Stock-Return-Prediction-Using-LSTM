@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 RAW_DIR = "data/raw"
-FEATURE_DIR = "data/feature"
+FEATURE_DIR = "data/features"
 INDEX_FILE = "data/raw/NSEI.csv"
 
 FEATURE_COLS = [
@@ -341,7 +341,7 @@ def add_target(df : pd.DataFrame, horizon: int = 1) -> pd.DataFrame:
     We keep both — you can switch loss functions to test regression vs clf.
     """
 
-    df[f"target_return_{horizon}d"] = df[" log_return_1d"].shift(-horizon)
+    df[f"target_return_{horizon}d"] = df["log_return_1d"].shift(-horizon)
     df[f"target_direction_{horizon}"] = (df[f"target_return_{horizon}d"] > 0).astype(int)
 
     return df
@@ -365,7 +365,7 @@ def rolling_zscore_normalise(df : pd.DataFrame, cols : list[str], window : int =
         if col not in df.columns:
             continue
         roll_mean = df[col].rolling(window, min_periods = 60).mean()
-        roll_std = df[col].rolling(window, min_periods = 60).mean()
+        roll_std = df[col].rolling(window, min_periods = 60).std()
         z = (df[col] - roll_mean) / roll_std.replace(0, np.nan)
         df[f"{col}_norm"] = z.clip(-3,3)
     return df
