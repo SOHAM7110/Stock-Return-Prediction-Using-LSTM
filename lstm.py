@@ -244,7 +244,7 @@ def train_classifier(X_train, y_train_dir, X_test, y_test_dir, ticker) -> dict:
     timesteps, n_features = X_train.shape[1], X_train.shape[2]
     model = build_classifier_model(timesteps, n_features)
 
-    model_path = os.path.join(MODEL_DIR, f"{ticker}_classifer.keras")
+    model_path = os.path.join(MODEL_DIR, f"{ticker}_classifier.keras")
     class_weight = compute_class_weights(y_train_dir)
 
     history = model.fit(

@@ -342,7 +342,7 @@ def add_target(df : pd.DataFrame, horizon: int = 1) -> pd.DataFrame:
     """
 
     df[f"target_return_{horizon}d"] = df["log_return_1d"].shift(-horizon)
-    df[f"target_direction_{horizon}"] = (df[f"target_return_{horizon}d"] > 0).astype(int)
+    df[f"target_direction_{horizon}d"] = (df[f"target_return_{horizon}d"] > 0).astype(int)
 
     return df
 

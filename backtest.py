@@ -163,11 +163,11 @@ def realistic_backtest(y_true : np.ndarray, y_pred : np.ndarray,
                 "capital"       : capital,
             })
 
-        df = pd.DataFrame(records, index=dates)
-        df["strategy_equity"] = (1 + df["net_ret"]).cumprod()
-        df["buyhold_equity"]  = (1 + y_true).cumprod()
-        df["buyhold_ret"]     = y_true
-        df["n_trades"]        = (df["delta"].abs() > 0.01).cumsum()
+    df = pd.DataFrame(records, index=dates)
+    df["strategy_equity"] = (1 + df["net_ret"]).cumprod()
+    df["buyhold_equity"]  = (1 + y_true).cumprod()
+    df["buyhold_ret"]     = y_true
+    df["n_trades"]        = (df["delta"].abs() > 0.01).cumsum()
 
     return df
 
@@ -272,16 +272,18 @@ def kelly_backtest(y_true : np.ndarray, y_pred : np.ndarray, dates : pd.Datetime
 def walk_forward_backtest(y_true : np.ndarray,
                           y_pred : np.ndarray,
                           dates : pd.DatetimeIndex,
-                          train_window : int = 504, # 2 Years
-                          test_window : int = 126,
-                          step : int = 63
-                          ) -> pd.DataFrame:
+                          train_window : int = 252,   # 1 Year
+                          test_window : int = 63,     # 3 Months
+                          step : int = 31             # ~6 weeks
+                        ) -> pd.DataFrame:
         """
         Instead of one fixed train/test split, we roll a window forward:
 
-        Fold 1: Train [0:504]    → Test [504:630]
-        Fold 2: Train [63:567]   → Test [567:693]
-        Fold 3: Train [126:630]  → Test [630:756]
+        Fold 1: Train [0:252]    → Test [252:315]
+        Fold 2: Train [31:283]   → Test [283:346]
+        Fold 3: Train [62:314]   → Test [314:377]
+        ...
+        Fold 9: Train [248:500]  → Test [500:563]
         ...
 
         Why this matters:
@@ -313,7 +315,10 @@ def walk_forward_backtest(y_true : np.ndarray,
                     (fold_rets.mean() - RF_DAILY) / fold_rets.std() * np.sqrt(TRADING_DAYS)
                 ) if fold_rets.std() > 0 else 0.0
                 dir_acc     = float(((fold_pred > 0) == (fold_true > 0)).mean())
-                ic, _       = stats.spearmanr(fold_pred, fold_true)
+
+                ic, _ = stats.spearmanr(fold_pred, fold_true)
+                ic = 0.0 if np.isnan(ic) else float(ic)
+
                 eq          = (1 + fold_rets).cumprod()
                 mdd         = float(((eq - np.maximum.accumulate(eq)) / np.maximum.accumulate(eq)).min())
                 n_trades    = int((fold_df["delta"].abs() > 0.01).sum())
@@ -326,18 +331,23 @@ def walk_forward_backtest(y_true : np.ndarray,
                     "ann_return"    : ann_ret,
                     "sharpe"        : sharpe,
                     "dir_accuracy"  : dir_acc,
-                    "ic"            : float(ic),
+                    "ic"            : ic,
                     "max_drawdown"  : mdd,
                     "n_trades"      : n_trades,
                     "total_cost"    : float(fold_df["cost"].sum()),
                 })
                 
                 fold  += 1
-                start += step
+                start += step        
                 
-                summary = pd.DataFrame(results)
-        return summary
+        if not results:
+            raise ValueError(
+                f"Dataset too small for walk-forward backtest. "
+                f"Need at least {train_window + test_window} samples, got {n}."
+            )
 
+        summary = pd.DataFrame(results)
+        return summary
 
 
 
