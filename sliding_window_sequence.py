@@ -113,13 +113,13 @@ def load_sequences(ticker: str, seq_dir: str = SEQ_DIR):
 
 
 def main():
-    print("=" * 50)
+    print("=" * 60)
     print("Stage 3 — Sequence Windowing")
     print(f"Window     : {WINDOW} days")
     print(f"Test cutoff: {TEST_CUTOFF}")
-    print("=" * 50)
+    print("=" * 60)
 
-    # Find all feature CSVs
+    # all feature CSVs 
     if not os.path.isdir(FEATURE_DIR):
         raise FileNotFoundError(
             f"Feature directory '{FEATURE_DIR}' not found. Run Stage 2 first."
@@ -136,11 +136,12 @@ def main():
 
     print(f"Found {len(feature_files)} tickers to process.\n")
 
-    # Process each ticker
+
     summary = []
 
     for fname in feature_files:
         ticker = fname.replace("_features.csv", "")
+        
         print(f"\n  {ticker} ...")
 
         df = pd.read_csv(
@@ -171,6 +172,7 @@ def main():
 
         print(f"    Saved → {SEQ_DIR}/{ticker}_[X/y]_[train/test].npy")
 
+    
     print("\n" + "=" * 60)
     print("Stage 3 Complete — Summary")
     print("=" * 60)

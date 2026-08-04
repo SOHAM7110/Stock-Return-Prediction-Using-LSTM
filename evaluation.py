@@ -215,14 +215,15 @@ def information_coefficient(y_true : np.ndarray, y_pred : np.ndarray) -> dict:
         volatile IC that averages well but is unreliable day-to-day.    
     """
 
+
     ic, p_value = stats.spearmanr(y_pred, y_true)
 
     n = len(y_true)
     rolling_ic = []
 
     for i in range(21, n):
-        window_ic = stats.spearmanr(y_pred[i-21 : i], y_true[i-21 : i])
-        rolling_ic.append(window_ic)
+        window_ic, _ = stats.spearmanr(y_pred[i-21 : i], y_true[i-21 : i])
+        rolling_ic.append(window_ic)          # float, not tuple
 
     rolling_ic = np.array(rolling_ic)
     icir = float(rolling_ic.mean() / rolling_ic.std()) if rolling_ic.std() > 0 else np.nan
@@ -256,23 +257,23 @@ def quintile_analysis(y_true : np.ndarray, y_pred : np.ndarray) -> dict:
         > 0.001  : ~25% annualised spread — strong alpha
     """
 
-    df = pd.DataFrame(
-        {
-            "pred" : y_pred,
-            "actual" : y_true,
-        }
-    )
-    df["quantile"] = pd.qcut(df["pred"], q = 5,
-                             labels = ["Q1", "Q2", "Q3", "Q4", "Q5"])
+    df = pd.DataFrame({"pred": y_pred, "actual": y_true})
 
-    qmeans = df.groupby("quintile", observed = True)["actual"].mean()
 
-    result = {f"quintile_{q}_mean_ret" : float(qmeans.get(q, np.nan)) for q in ["Q1", "Q2", "Q3", "Q4", "Q5"]}
+    df["quintile"] = pd.qcut(df["pred"], q=5,
+                             labels=["Q1", "Q2", "Q3", "Q4", "Q5"])
+
+
+    qmeans = df.groupby("quintile", observed=True)["actual"].mean()
+
+    result = {f"quintile_{q}_mean_ret": float(qmeans.get(q, np.nan))
+              for q in ["Q1", "Q2", "Q3", "Q4", "Q5"]}
 
     q1 = qmeans.get("Q1", np.nan)
     q5 = qmeans.get("Q5", np.nan)
     result["quintile_spread"] = float(q5 - q1) if not (np.isnan(q1) or np.isnan(q5)) else np.nan
     result["monotonic"]       = bool(qmeans.is_monotonic_increasing)
+
     return result
 
 
@@ -406,13 +407,20 @@ def print_summary(summary_df : pd.DataFrame):
     )
     print("=" * 78)
 
+
+
+    
+
 def main():
     all_results = []
+
     for ticker in TICKERS:
         model_path = os.path.join(MODEL_DIR, f"{ticker}_regression.keras")
+
         if not os.path.exists(model_path):
-            print("Model not found Run stage 4")
-            continue
+            print(f"  SKIP {ticker} — model not found. Run Stage 4 first.")
+            continue                           # was missing — fell through to evaluate_ticker
+
         try:
             metrics = evaluate_ticker(ticker)
             all_results.append(metrics)
@@ -426,10 +434,11 @@ def main():
     os.makedirs(RESULTS_DIR, exist_ok=True)
     summary_df = pd.DataFrame(all_results)
     summary_df.to_csv(os.path.join(RESULTS_DIR, "summary.csv"), index=False)
-
-
     print(f"\nFull metrics → results/summary.csv")
- 
     print_summary(summary_df)
+
+
+if __name__ == "__main__":
+    main()
 
 
