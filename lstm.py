@@ -28,7 +28,7 @@ TICKERS     = [
 
 # Training Hyperparameters :
 BATCH_SIZE = 32
-MAX_EPOCHS = 100
+MAX_EPOCHS = 200
 LR = 1e-3
 SEED = 42
 SEQ_DIR = "data/sequences"
@@ -168,7 +168,7 @@ def get_callbacks(model_path: str, monitor: str = "val_loss") -> list:
     return[
         EarlyStopping(
             monitor = monitor,
-            patience = 15,
+            patience = 25,
             restore_best_weights = True,
             verbose = 1
         ),
@@ -176,7 +176,7 @@ def get_callbacks(model_path: str, monitor: str = "val_loss") -> list:
         ReduceLROnPlateau(
             monitor = monitor,
             factor = 0.5,
-            patience = 7,
+            patience = 10,
             min_lr = 1e-6,
             verbose = 1
         ),

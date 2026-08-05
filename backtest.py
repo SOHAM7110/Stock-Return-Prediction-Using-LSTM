@@ -39,7 +39,7 @@ BASE_ONE_WAY_COST = BID_ASK_SPREAD / 2 + BROKERAGE + SEBI_CHARGE + SLIPPAGE
 HALF_KELLY = 0.5            # fractional Kelly — conservative
 MAX_POSITION = 1.0          # cap at 100% of capital (no leverage)
 MIN_POSITION = 0.05         # ignore Kelly sizes below 5% (noise)
-SIGNAL_THRESHOLD  = 0.0     # minimum |predicted return| to trade
+SIGNAL_THRESHOLD  = 0.003     # minimum |predicted return| to trade
 
 
 def transaction_cost(position_change : float, is_sell : bool,  avg_volume_ratio : float = 1.0) -> float:
