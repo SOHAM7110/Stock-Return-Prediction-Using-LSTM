@@ -11,9 +11,6 @@ import lstm
 import evaluation
 import backtest
 
-import os
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import tensorflow as tf
 tf.get_logger().setLevel("ERROR")
@@ -38,7 +35,7 @@ def main():
         ("Stage 3 - Sliding Window Sequence", sliding_window_sequence.main),
         ("Stage 4 - LSTM", lstm.main),
         ("Stage 5 - Evaluation", evaluation.main),
-        # ("Stage 6 - Backtesting", backtest.main),
+        ("Stage 6 - Backtesting", backtest.main),
     ]
     for stage_name, stage_function in pipeline:
         run_stage(stage_name, stage_function)
