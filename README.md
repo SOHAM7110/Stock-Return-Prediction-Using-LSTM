@@ -89,4 +89,40 @@ Outputs:
 Why these metrics matter more than RMSE:   
   A model can have low RMSE but still be useless for trading if it   
   gets direction wrong on the big move days. Sharpe ratio, directional  
-  accuracy, and IC tell you whether the signal is actually tradeable.  
+  accuracy, and IC tell you whether the signal is actually tradeable.
+
+
+### Stage 6 — Backtesting Engine
+Stock Return Prediction | Quant Research Roadmap — Tier 2
+ 
+Three layers of increasing realism:
+ 
+  Layer 1 — Naive backtest         : signal × return, flat position sizing   
+  Layer 2 — Realistic backtest     : transaction costs + slippage + signal threshold   
+  Layer 3 — Kelly backtest         : volatility-scaled position sizing (Kelly Criterion)   
+ 
+Walk-forward validation:   
+  Rolls a training window forward in 6-month steps.   
+  Retrains the model on each fold to prevent the model from using   
+  a parameter set tuned on data it never should have seen.  
+ 
+Outputs:  
+  backtest/TICKER_naive.csv   
+  backtest/TICKER_realistic.csv   
+  backtest/TICKER_kelly.csv   
+  backtest/TICKER_walkforward.csv   
+  backtest/summary.csv
+ 
+Key realistic frictions modelled:   
+  - Bid-ask spread        : 0.05% per trade (NSE liquid large-caps)      
+  - Market impact         : 0.03% × sqrt(order_size / avg_volume)   
+  - Brokerage commission  : 0.03% per trade (Zerodha/discount broker)   
+  - STT (Securities Tx Tax): 0.025% on sell side (Indian equity specific)   
+  - SEBI charges          : 0.0001% per trade   
+  - Slippage              : 0.02% assumed execution slippage   
+  Total one-way cost estimate: ~0.13–0.15% per trade
+ 
+Position limits:
+  - Max position size     : 100% of capital (no leverage at fresher stage)   
+  - Min signal threshold  : 0.0 (trade on any non-zero prediction)   
+  - Kelly fraction        : half-Kelly (full Kelly is too aggressive)   
