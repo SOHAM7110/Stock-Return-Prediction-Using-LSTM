@@ -65,6 +65,28 @@ Train both and compare: sometimes direction accuracy matters more than
 minimising return error, depending on your trading strategy.
  
 Output:
-    models/TICKER_regression.keras
-    models/TICKER_classifier.keras
+    models/TICKER_regression.keras  
+    models/TICKER_classifier.keras   
     models/TICKER_history.csv       ← loss curves for plotting
+
+### Stage 5 — Quant Evaluation Suite
+Stock Return Prediction | Quant Research Roadmap — Tier 2
+ 
+Loads trained models from Stage 4, runs predictions on the test set,
+and evaluates them the way a quant desk would — NOT just RMSE.
+ 
+Metrics computed:
+  ML metrics    : RMSE, MAE, R²
+  Quant metrics : Sharpe ratio, Sortino ratio, Max drawdown,
+                  Calmar ratio, Directional accuracy, Hit rate by quintile,
+                  Information Coefficient (IC), Annualised return
+ 
+Outputs:
+  results/TICKER_metrics.csv       ← all metrics in one row per ticker
+  results/TICKER_equity_curve.csv  ← daily P&L for plotting
+  results/summary.csv              ← cross-ticker comparison table
+ 
+Why these metrics matter more than RMSE:
+  A model can have low RMSE but still be useless for trading if it
+  gets direction wrong on the big move days. Sharpe ratio, directional
+  accuracy, and IC tell you whether the signal is actually tradeable.
