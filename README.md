@@ -51,3 +51,20 @@ data/sequences/
   - RELIANCE_test_dates.csv
     
 The saved sequences are used as input for Stage 4 — LSTM Training.
+
+### Stage 4 — LSTM Model Architecture + Training
+Stock Return Prediction | Quant Research Roadmap — Tier 2
+ 
+Loads sequences from Stage 3 (main.py → load_sequences())
+Builds, trains, and saves two models per ticker:
+  - Regression  : predicts next-day log return (float)
+  - Classifier  : predicts direction (1=up, 0=down)
+ 
+Both models share the same LSTM backbone — only the output head differs.
+Train both and compare: sometimes direction accuracy matters more than
+minimising return error, depending on your trading strategy.
+ 
+Output:
+    models/TICKER_regression.keras
+    models/TICKER_classifier.keras
+    models/TICKER_history.csv       ← loss curves for plotting
