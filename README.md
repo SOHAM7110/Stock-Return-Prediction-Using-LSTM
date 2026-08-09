@@ -1,4 +1,29 @@
-# About Project
+## Project Overview — Stock Return Prediction Using LSTM
+
+This project develops a **deep learning-based stock return prediction system** using **Long Short-Term Memory (LSTM)** networks. Historical   stock market data is processed to generate technical indicators and normalized features, which are then converted into **60-day sliding-window sequences** for time-series modeling.
+
+The model uses the previous 60 trading days of market information to predict the **next-day stock return**. A strict chronological train/test split is used to prevent future information from leaking into the training data.
+
+### Pipeline
+
+**Historical Data → Feature Engineering → Normalization → Sequence Windowing → LSTM Training → Prediction → Evaluation**  
+
+The project is designed as a modular pipeline, with intermediate datasets and sequences saved to disk so that individual stages can be rerun independently.
+
+### Key Features
+
+* Historical stock and market data processing  
+* Technical indicator-based feature engineering  
+* 60-day sequential input windows  
+* Next-day return prediction  
+* LSTM-based time-series modeling  
+* Chronological train/test splitting  
+* Leakage-aware preprocessing  
+* Walk-forward backtesting and model evaluation  
+* Performance comparison using financial prediction metrics  
+
+The primary objective is to explore whether **historical price, volume, technical indicators, and market-relative features contain useful information for predicting short-term stock returns**.
+
 
 ## Stages in Project :
 ### Stage 1 : Fetch Data
@@ -125,4 +150,10 @@ Key realistic frictions modelled:
 Position limits:
   - Max position size     : 100% of capital (no leverage at fresher stage)   
   - Min signal threshold  : 0.0 (trade on any non-zero prediction)   
-  - Kelly fraction        : half-Kelly (full Kelly is too aggressive)   
+  - Kelly fraction        : half-Kelly (full Kelly is too aggressive)
+
+
+
+----------------------------------------------------------------------------------------------------------------------------
+to install required modules :   
+pip install -r requirements.txt
